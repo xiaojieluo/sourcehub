@@ -1,4 +1,4 @@
-from nav.models import Model, StringField, DatetimeField, IntField
+from sourcehub.models import Model, StringField, DatetimeField, IntField
 import datetime
 import pytest
 

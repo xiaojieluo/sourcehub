@@ -1,4 +1,4 @@
-from nav import make_app
+from sourcehub import make_app
 
 
 if __name__ == '__main__':

@@ -1,5 +1,5 @@
 # import pytest
-from nav.models import Model, StringField, ListField, FieldValidateError
+from sourcehub.models import Model, StringField, ListField, FieldValidateError
 
 class Case(Model):
     tags = ListField()
