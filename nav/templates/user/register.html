@@ -1,0 +1,45 @@
+{% extends "layouts.html" %}
+
+{% block title %}
+    用户注册
+{% endblock %}
+
+{% block content %}
+
+    <form method="POST" class="">
+        {{ form.csrf_token() }}
+      <div class="form-group">
+        {{ form.username.label }}
+        {{ form.username(class="form-control", placeholder="Enter username.") }}
+      </div>
+
+
+      <div class="form-group">
+          {{ form.email.label }}
+          {{ form.email(class="form-control", placeholder="Please input email address") }}
+          <small id="emailHelp" class="form-text text-muted">We'll never share your email with anyone else.</small>
+      </div>
+
+      <div class="form-group">
+        {{ form.password.label }}
+        {{ form.password(class="form-control", placeholder="Password") }}
+      </div>
+
+
+    <div class="form-group">
+        {{ form.password_confirm.label }}
+        {{ form.password_confirm(class="form-control", placeholder="Confirm password") }}
+    </div>
+
+
+      <button type="submit" class="btn btn-primary">Submit</button>
+    </form>
+{% endblock %}
+
+{% block script %}
+<script type="text/javascript">
+    $(document).ready({
+
+    })
+</script>
+{% endblock %}

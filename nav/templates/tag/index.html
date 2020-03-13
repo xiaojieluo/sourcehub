@@ -1,0 +1,23 @@
+{% extends "layouts.html" %}
+
+{% block title %}
+    Tag
+{% endblock %}
+
+{% block content %}
+    <div class="container">
+        标签名： {{ tag.name }} <br />
+        收藏了 {{ tag.collectNum }} 条网址 <br />
+        关注数: {{ tag.star }} <br />
+        创建日期： {{ tag.created_at }} <br />
+        更新日期： {{ tag.updated_at }} <br />
+        <hr>
+        <div class="link-list">
+            {% for link in links %}
+                {% include "link/link-info.html" %}
+            {% endfor %}
+
+        </div>
+    </div>
+
+{% endblock %}
