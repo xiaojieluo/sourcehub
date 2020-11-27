@@ -1,0 +1,9 @@
+{
+    // 不在 workspace 中显示的文件
+    "files.exclude": {
+        ".cache": true,
+        ".env": false,
+        "**/.pytest_cache": true,
+        "**/__pycache__":true
+    }
+}

@@ -14,3 +14,8 @@ def star(linkid):
 
     result = current_user.do_star(link)
     return {'result': 'True'}
+
+
+@link.route('/<name>')
+def index(name):
+    print(name)

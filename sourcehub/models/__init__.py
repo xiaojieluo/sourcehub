@@ -1,7 +1,4 @@
-from mongoengine import *
-
-connect('sourcehub')
-
+from .app import App
 from .user import User
-from .link import Link
-from .tag  import Tag
+from .tag import Tag
+# from .site import Site

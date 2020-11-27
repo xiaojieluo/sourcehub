@@ -1,5 +1,5 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField
+from wtforms import StringField, PasswordField, FileField
 from wtforms.validators import DataRequired, Length, EqualTo
 from sourcehub.web import Unique
 from sourcehub.models import User, Link
@@ -43,3 +43,19 @@ class LinkForm(FlaskForm):
         Unique(Link, Link.url, message="该 url 已存在")
     ])
     tags = StringField('Tags:')
+
+
+class CreateWebsiteForm(FlaskForm):
+    """新建Website表单
+
+    Arguments:
+        FlaskForm {[type]} -- [description]
+    """
+    title = StringField('Title:', [
+        DataRequired(),
+    ])
+    url = StringField('Url: ', [
+        DataRequired(),
+    ])
+    image = FileField('首页图片')
+    tags = StringField('Tags: ')

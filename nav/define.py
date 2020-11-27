@@ -1,2 +1,0 @@
-SUCCESSFUL = 'success'
-ERROR = 'error'

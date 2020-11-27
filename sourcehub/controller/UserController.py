@@ -3,6 +3,7 @@ from flask import Blueprint, request, render_template, url_for, redirect, flash
 from sourcehub.models import User
 from flask_login import login_user, login_required, logout_user
 from sourcehub.forms import RegistrationForm, LoginForm
+from mongoengine import NotUniqueError
 
 user = Blueprint('user', __name__, url_prefix='/user')
 
@@ -24,12 +25,18 @@ def register():
     form = RegistrationForm()
     if request.method == 'POST':
         if form.validate_on_submit():
-            user = User.register(form.data)
-            if user:
-                flash("注册成功！")
-                User.login(form.data)
+            try:
+                user = User.register(form.data)
+            except NotUniqueError as e:
+                flash("注册失败， 用户名重复")
             else:
-                flash("注册失败！")
+                flash("注册成功")
+                User.login(form.data)
+            # if user:
+            #     flash("注册成功！")
+            #     User.login(form.data)
+            # else:
+            #     flash("注册失败！")
             return redirect(url_for('index.main'))
         else:
             flash(form.errors)

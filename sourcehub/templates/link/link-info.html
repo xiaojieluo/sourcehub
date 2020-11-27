@@ -1,6 +1,11 @@
 <div class="card link-card">
     <div class="card-body link">
-        <h4><a href="{{ link.url }}" _target="blank">{{ link.title }}</a></h4>
+        {% if link.slug != None %}
+            <h4><a href="{{ link.slug }}" _target="blank">{{ link.title }}</a></h4>
+        {% else %}
+            <h4><a href="{{ link._id }}" _target="blank">{{ link.title }}</a></h4>
+        {% endif %}
+
         <small>{{ link.url }}</small> <br>
         created_at: {{ link.created_at }}
 

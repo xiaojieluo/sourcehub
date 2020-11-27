@@ -1,24 +1,25 @@
-# from sourcehub import app
 from flask import Blueprint, request, render_template, flash, redirect, url_for, current_app
-from sourcehub.models import User, Link
+from sourcehub.models import User, Link, Site
 import pymongo
 from sourcehub import define
 from sourcehub.forms import LinkForm
 from flask_login import login_required, current_user
-from sourcehub.api import IndexApi
+# from sourcehub.api import IndexApi
 
 index = Blueprint('index', __name__, url_prefix='')
 
 
 @index.route('/')
 def main():
-    links = Link.objects(is_show=1).order_by('created_at')
+    # links = Link.objects().order_by('created_at')
+    websites = Site.objects().order_by('created_at')
+    print(websites)
+    # print(links)
+    # index = IndexApi.index()
+    # s = index.get(12)
+    # return s
 
-    index = IndexApi.index()
-    s = index.get(12)
-    return s
-
-    return render_template('index/index.html', links=links)
+    return render_template('index/index.html', websites = websites)
 
 
 @index.route('/create', methods=['GET', 'POST'])

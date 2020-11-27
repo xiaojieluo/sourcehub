@@ -5,10 +5,18 @@
 {% endblock %}
 
 {% block content %}
+    <h1>Links</h1>
   {% for link in links %}
     {% include "link/link-info.html" %}
   {% endfor %}
+
+  <br>
+  <h1>Websites</h1>
+  {%- for website in websites -%}
+    {% include "website/website_list.html" %}
+  {%- endfor -%}
 {% endblock %}
+
 
 {% block style %}
     <style media="screen">

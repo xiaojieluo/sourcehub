@@ -23,6 +23,8 @@
             <a href="#"></a>
         </div>
         <a href="{{ url_for('index.create') }}">create</a>
+        <a href="{{ url_for('website.create') }}">create a website</a>
+
         <div class="header">
             {% with messages = get_flashed_messages(with_categories=true) %}
               {% if messages %}

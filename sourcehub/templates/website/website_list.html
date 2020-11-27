@@ -1,0 +1,20 @@
+<div class="card link-card">
+    <div class="card-body link">
+        <h4><a href="{{ url_for('website.index', id=website.id) }}" _target="blank">{{ website.title }}</a></h4>
+        <small>{{ website.url }}</small> <br>
+        created_at: {{ website.created_at }}
+
+        {% if website.tags %}
+            <div class="tags">
+                {% for tag in website.tags %}
+                <a href="{{ url_for('tag.index', name=tag) }}" class="badge badge-info">{{ tag }}</a> {% endfor %}
+            </div>
+            {% if current_user.is_authenticated %}
+            <button type="button" class="btn btn-outline-secondary star_btn" id="star_btn" data-linkid="{{ website.id }}">Star</button>
+
+            {% else %}
+                    <a href="">Star</a>
+            {% endif %}
+        {% endif %}
+    </div>
+</div>
