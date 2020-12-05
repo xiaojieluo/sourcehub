@@ -30,11 +30,6 @@ class User(db.Model):
     # 帐号活跃值，当用户注销账号时，将值设置为0，即冻结状态
     activity = db.Column(db.Integer, default=1)
 
-    def delete(self):
-        self.activity = 0
-        db.session.add(self)
-        db.session.commit()
-
     def to_dict(self, found=None):
         """将查询返回的字段转换成 dict 格式
         copyright [stackoverflow](https://stackoverflow.com/questions/23554119/convert-sqlalchemy-orm-result-to-dict)
