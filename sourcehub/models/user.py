@@ -1,10 +1,9 @@
-from sourcehub import db
+from flask import current_app
 from datetime import datetime
-import uuid
+from sqlalchemy.orm import class_mapper
 from passlib.apps import custom_app_context as pwd_context
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
-from flask import current_app
-from sqlalchemy.orm import class_mapper
+from sourcehub import db
 
 
 class User(db.Model):
@@ -76,6 +75,7 @@ class User(db.Model):
         s = Serializer(secret_key, expiration_time)
 
         self.sessionToken = s.dumps(self.id).decode('utf-8')
+        db.session.commit()
 
     def verify_sessiontoken(self, token) -> tuple:
         """验证 sessionToken
@@ -87,7 +87,7 @@ class User(db.Model):
         Returns:
             tuple: 验证成功返回 (True, None)， 失败返回 (False, 失败信息)
         """
-        result = (False, None)
+        result = (False, '未知错误')
         if token != self.sessionToken:
             return result
 
