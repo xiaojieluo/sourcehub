@@ -49,7 +49,7 @@ class SiteListApi(Resource):
         user = User.query.filter_by(sessionToken=sessionToken).first()
         data = args
         data['author_id'] = user.id
-        site = Site(**args)
+        site = Site(**data)
         db.session.add(site)
         db.session.commit()
 
@@ -138,6 +138,11 @@ class SiteApi(Resource):
         Arguments:
             site_id {[type]} -- [description]
         """
+        try:
+            site_id = int(site_id)
+        except Exception as e:
+            return error(104)
+
         data = request.json
         if data is None or not isinstance(data, dict):
             current_app.logger.warning("更新用户 body 为空")
@@ -147,28 +152,28 @@ class SiteApi(Resource):
         if not site:
             return error(101)
 
-        # 遍历查询 site 关联的 tag 表， 从 tag 表中删除关联的数据
-        tags = Tag.query.filter(Tag.id.in_(site.tags)).all()
-        for tag in tags:
-            if site.id in tag.sites:
-                tag.sites.remove(site.id)
-        db.session.commit()
-
-        # 遍历用户传入的 tags 字段，写入 tag 表，并关联 site 数据
-        tag_list_ids = list()
-        # tags_str = data.pop('tags')
-        for tag in data.pop('tags', []):
-            t = Tag.query.filter_by(name=tag).first()
-            if t is None:
-                t = Tag(name=tag, sites=[site.id, ])
-            if site.id not in t.sites:
-                t.sites.append(site.id)
-            db.session.add(t)
+        if 'tags' in data.keys():
+            # 遍历查询 site 关联的 tag 表， 从 tag 表中删除关联的数据
+            tags = Tag.query.filter(Tag.id.in_(site.tags)).all()
+            for tag in tags:
+                if site.id in tag.sites:
+                    tag.sites.remove(site.id)
             db.session.commit()
-            tag_list_ids.append(t.id)
+
+            # 遍历用户传入的 tags 字段，写入 tag 表，并关联 site 数据
+            tag_list_ids = list()
+            for tag in data.pop('tags', []):
+                t = Tag.query.filter_by(name=tag).first()
+                if t is None:
+                    t = Tag(name=tag, sites=[site.id, ])
+                if site.id not in t.sites:
+                    t.sites.append(site.id)
+                db.session.add(t)
+                db.session.commit()
+                tag_list_ids.append(t.id)
+            site.tags = tag_list_ids
 
         try:
-            site.tags = tag_list_ids
             site.updated_at = datetime.datetime.now()
             Site.query.filter_by(id=site.id).update(data)
             db.session.commit()
