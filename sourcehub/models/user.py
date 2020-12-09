@@ -1,12 +1,15 @@
 from flask import current_app
 from datetime import datetime
 from sqlalchemy.orm import class_mapper
+from sqlalchemy.dialects import postgresql
 from passlib.apps import custom_app_context as pwd_context
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
+from itsdangerous import SignatureExpired
 from sourcehub import db
+from sourcehub.database import ModelMixin, MutableList
 
 
-class User(db.Model):
+class User(ModelMixin, db.Model):
     """用户表
 
     Args:
@@ -28,34 +31,22 @@ class User(db.Model):
     last_login = db.Column(db.TIMESTAMP, default=datetime.now())
     # 帐号活跃值，当用户注销账号时，将值设置为0，即冻结状态
     activity = db.Column(db.Integer, default=1)
+    sites = db.Column(
+        MutableList.as_mutable(postgresql.ARRAY(db.Integer, dimensions=1)),
+        default=list(),
+        server_default='{}',
+    )
 
     def to_dict(self, found=None):
-        """将查询返回的字段转换成 dict 格式
-        copyright [stackoverflow](https://stackoverflow.com/questions/23554119/convert-sqlalchemy-orm-result-to-dict)
+        """继承 ModelMixin 的 to_dict 方法，弹出 password_hash 字段
 
         Args:
-            self (object): [description]
             found ([type], optional): [description]. Defaults to None.
 
         Returns:
             [type]: [description]
         """
-        if found is None:
-            found = set()
-        mapper = class_mapper(self.__class__)
-        columns = [column.key for column in mapper.columns]
-        get_key_value = lambda c: (c, getattr(self, c).isoformat()) if isinstance(getattr(self, c), datetime) else (c, getattr(self, c))
-        out = dict(map(get_key_value, columns))
-        for name, relation in mapper.relationships.items():
-            if relation not in found:
-                found.add(relation)
-                related_obj = getattr(self, name)
-                if related_obj is not None:
-                    if relation.uselist:
-                        out[name] = [self.to_dict(child, found) for child in related_obj]
-                    else:
-                        out[name] = self.to_dict(related_obj, found)
-
+        out = super().to_dict(found)
         out.pop('password_hash')
         return out
 
@@ -98,9 +89,9 @@ class User(db.Model):
             data = s.loads(token.encode('utf-8'))
             if data == self.id:
                 result = (True, None)
-        except Exception as e:
+        except SignatureExpired as e:
             current_app.logger.debug(e)
-            result = (False, e)
+            result = (False, e.message)
 
         return result
 
