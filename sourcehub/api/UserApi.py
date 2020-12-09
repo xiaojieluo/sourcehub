@@ -2,7 +2,7 @@ import datetime
 from flask import Blueprint, current_app, request
 from flask_restful import abort, Api, reqparse, Resource
 from sourcehub import api_url, db, error
-from sourcehub.auth import authenticate, authenticate_key, authenticate_masterkey, authenticate_session
+from sourcehub.auth import authenticate, authenticate_app, authenticate_masterkey, authenticate_session
 from sourcehub.models import User
 
 
@@ -12,9 +12,7 @@ api = Api(user_api)
 
 class UserListApi(Resource):
     '''用户列表 api'''
-    method_decorators = {
-        'get': [authenticate(authenticate_key)]
-    }
+    method_decorators = authenticate(authenticate_app)
 
     def get(self):
         """显示 用户列表
@@ -79,10 +77,7 @@ class UserListApi(Resource):
 
 class UserApi(Resource):
     '''单个用户 api'''
-
-    method_decorators = {
-        'delete': [authenticate(authenticate_key)]
-    }
+    method_decorators = authenticate(authenticate_app)
 
     def get(self, user_id):
         """获取用户信息
@@ -109,7 +104,7 @@ class UserApi(Resource):
             user_id {[type]} -- [description]
         """
         data = request.json
-        if request.json is None or isinstance(request.json, dict):
+        if data is None or isinstance(data, dict):
             current_app.logger.warning("更新用户 body 为空")
             data = dict()
 
@@ -144,9 +139,7 @@ class UserLoginApi(Resource):
     Arguments:
         Resource {[type]} -- [description]
     """
-    method_decorators = {
-        'get': [authenticate(authenticate_key)]
-    }
+    method_decorators = authenticate(authenticate_app)
 
     def get(self):
         parser = reqparse.RequestParser()
@@ -186,6 +179,7 @@ class RefreshSessionToken(Resource):
     Arguments:
         Resource {[type]} -- [description]
     """
+    method_decorators = authenticate(authenticate_app)
 
     @authenticate(authenticate_session, authenticate_masterkey, method='or')
     def put(self, user_id):
@@ -221,7 +215,9 @@ class UserMeApi(Resource):
     Returns:
         [type]: [description]
     """
-    @authenticate(authenticate_key, authenticate_session, method='and')
+    method_decorators = authenticate(authenticate_app)
+
+    @authenticate(authenticate_session)
     def get(self):
         parser = reqparse.RequestParser()
         parser.add_argument('sessionToken', location='headers', type=str)
