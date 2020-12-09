@@ -1,79 +1,21 @@
+import json
 import datetime
 from flask import Blueprint, current_app, request, jsonify
 from flask_restful import Resource, Api, reqparse
 from sourcehub import api_url, db
-from sourcehub.auth import authenticate, authenticate_session
-from sourcehub.models.site import Site
-from sourcehub.models.tag import Tag
-import json
+from sourcehub.auth import authenticate, authenticate_session, authenticate_app, authenticate_masterkey
+from sourcehub.models import Site, Tag, User
+from sourcehub import error
 
 
-site_api = Blueprint('site_api', __name__, url_prefix='/api/sites')
+site_api = Blueprint('site_api', __name__)
 api = Api(site_api)
 
 
-parser = reqparse.RequestParser()
-parser.add_argument('where', type=str, location="args")
-parser.add_argument('order', type=str, location="args")
-
-# class Query(object):
-#     pass
-
-
-def explode_order(args):
-    order_list = list()
-    if args != None:
-        order_list = args.split(',')
-    return order_list
-
-
-def explode_where(where_dict):
-    """处理url中的 where字段，
-    # TODO
-    Arguments:
-        where_dict {[type]} -- [description]
-
-    Returns:
-        [type] -- [description]
-    """
-    res = {}
-    if where_dict is None:
-        return res
-    where = json.loads(where_dict)
-
-    for key, value in where.items():
-        # 如果 value 为 dict , 则表示有其他选项参数， 需要进一步处理合并
-        if isinstance(value, dict):
-            # 处理具体到值的时候
-            tmp = ''
-            for k, v in value.items():
-                # 合并产生新 key 值
-                tmp = '{}__{}'.format(key, k.strip('$'))
-            res.update({tmp: v})
-            current_app.logger.debug(res)
-            print(res)
-        else:
-            res = where
-    print(res)
-    return res
-
-class APIResource(Resource):
-    """继承 Resource , 实现 exclude 和 order 等参数过滤器
-
-    Args:
-        Resource ([type]): [description]
-    """
-    pass
-
 class SiteListApi(Resource):
-    method_decorators = {
-        'get': [authenticate, ],
-    }
+    method_decorators = authenticate(authenticate_app)
 
     def get(self):
-        args = parser.parse_args()
-        where = explode_where(args['where'])
-        order = explode_order(args['order'])
         """获取site列表
 
         Returns:
@@ -88,6 +30,7 @@ class SiteListApi(Resource):
             'results': sites
         }
 
+    @authenticate(authenticate_session)
     def post(self):
         """新增站点
         """
@@ -96,72 +39,64 @@ class SiteListApi(Resource):
         parser.add_argument('desc')
         parser.add_argument('url', required=True)
         parser.add_argument('tags', action='append')
-        # parser.add_argument('author', required=True)
-        # parser.add_argument('vote')
+        parser.add_argument('sessionToken', location='headers')
         args = parser.parse_args()
         current_app.logger.debug(args)
 
         tags = args.pop('tags', [])
-        site = Site(**args, tags = [])
+        sessionToken = args.pop('sessionToken', '')
+
+        user = User.query.filter_by(sessionToken=sessionToken).first()
+        data = args
+        data['author_id'] = user.id
+        site = Site(**args)
         db.session.add(site)
         db.session.commit()
 
-        # 更新 tag 表
-        current_app.logger.debug("更新 Tags 表")
+        # 将用户新建的 site id 写入 user.sites
+        if site.id not in user.sites:
+            user.sites.append(site.id)
+            db.session.commit()
+
         for tag in tags:
             t = Tag.query.filter_by(name=tag).first()
             if t is None:
-                t = Tag(name = tag, sites = [site.id,])
+                t = Tag(name=tag, sites=[site.id, ])
             else:
                 t.sites.append(site.id)
-            site.tags.append(t.id)
 
             db.session.add(t)
-            db.session.add(site)
-        db.session.commit()
+            db.session.commit()
+
+            site.tags.append(t.id)
+            db.session.commit()
 
         return {
-            "status": "Success."
-        }
-
-        try:
-            site = Site(**args)
-            site.save()
-
-            # 更新 tag 表
-            for tag in args['tags']:
-                Tag.objects(name=tag).update_one(
-                    inc__count=1, push__sites=site.id, upsert=True)
-
-            data = site.to_dict()
-            return {
-                '_id': data['_id'],
-                'created_at': data['created_at'],
-            }, 201, {'Location': '{}/sites/{}'.format(api_url, data['_id'])}
-
-        except Exception as e:
-            current_app.logger.debug(e)
-            return {'message': 'error.'}, 400
+            'id': site.id,
+            'created_at': site.to_dict().get('created_at'),
+        }, 201, {'Location': f'{api_url}/sites/{site.id}'}
 
 
 class SiteApi(Resource):
-    method_decorators = {
-        'delete': [authenticate, ]
-    }
+    method_decorators = authenticate(authenticate_app)
 
     def get(self, site_id):
-        site = Site.objects(id=site_id).first()
+        try:
+            site_id = int(site_id)
+        except ValueError as e:
+            return error(104)
 
+        site = Site.query.filter_by(id=site_id).first()
         if site:
             data = site.to_dict()
-            author = User.objects(id=data['author']).first()
-            if author:
-                data['author'] = {'_id': str(
-                    author.id), 'name': author.username}
             return data, 200
+        else:
+            return error(101)
 
-    def delete(self, site_id):
+    def delete(self, site_id: int):
         """删除 site
+        删除 tag.sites 关联的数据
+        删除 user.sites 关联的字段
 
         Arguments:
             site_id {[type]} -- [description]
@@ -169,42 +104,80 @@ class SiteApi(Resource):
         Returns:
             [type] -- [description]
         """
-        site = Site.objects(id=site_id).first()
+        try:
+            site_id = int(site_id)
+        except ValueError as e:
+            return error(104)
 
-        if site:
-            # 删除 tag 表的记录
-            for tag in site.tags:
-                Tag.objects(name=tag).update_one(
-                    dec__count=1, pull__sites=site.id, upsert=True)
-            site.delete()
+        site = Site.query.filter_by(id=site_id).first()
+        if not site:
+            return error(101)
+
+        tags = Tag.query.filter(Tag.id.in_(site.tags)).all()
+        for tag in tags:
+            try:
+                tag.sites.remove(site.id)
+            except ValueError as e:
+                current_app.logger.debug(
+                    f"Tag id:{tag} not in tag.sites: {tag.sites}")
+
+        # 从 user.sites 字段中删除关联数据
+        user = User.query.filter_by(id=site.author_id).first()
+        if user:
+            user.sites.remove(site.id)
+
+        db.session.delete(site)
+        db.session.commit()
 
         return {'message': 'success'}, 200
 
-    def put(self, site_id):
-        """更新 site
+    def put(self, site_id: int):
+        """更新 site,
+        注意： 这个方法为覆盖更新， 只更新传入的字段，其余不变
 
         Arguments:
             site_id {[type]} -- [description]
         """
-        site = Site.objects(id=site_id).first()
+        data = request.json
+        if data is None or not isinstance(data, dict):
+            current_app.logger.warning("更新用户 body 为空")
+            data = dict()
 
+        site = Site.query.filter_by(id=site_id).first()
         if not site:
-            return {'message': 'not found site'}, 404
+            return error(101)
+
+        # 遍历查询 site 关联的 tag 表， 从 tag 表中删除关联的数据
+        tags = Tag.query.filter(Tag.id.in_(site.tags)).all()
+        for tag in tags:
+            if site.id in tag.sites:
+                tag.sites.remove(site.id)
+        db.session.commit()
+
+        # 遍历用户传入的 tags 字段，写入 tag 表，并关联 site 数据
+        tag_list_ids = list()
+        # tags_str = data.pop('tags')
+        for tag in data.pop('tags', []):
+            t = Tag.query.filter_by(name=tag).first()
+            if t is None:
+                t = Tag(name=tag, sites=[site.id, ])
+            if site.id not in t.sites:
+                t.sites.append(site.id)
+            db.session.add(t)
+            db.session.commit()
+            tag_list_ids.append(t.id)
 
         try:
-            data = request.json
-            # 更新 tags 表
-            # 因为这里是覆盖更新，所以需要删除之前 tags 的所有关联数据，再重新写入新的 tags 数据
-            if 'tags' in data:
-                Tag.remove_tags(site, site.tags)
-                Tag.add_tags(site, data['tags'])
-
-            site.update(**data, updated_at=datetime.datetime.now())
-            return {'updated_at': site.updated_at.isoformat()}
-
+            site.tags = tag_list_ids
+            site.updated_at = datetime.datetime.now()
+            Site.query.filter_by(id=site.id).update(data)
+            db.session.commit()
+            return {
+                'updated_at': str(site.updated_at),
+            }
         except Exception as e:
-            current_app.logger.debug(e)
-            return {'message': e}, 404
+            print(e)
+            return error(-1)
 
 
 api.add_resource(SiteListApi, '/')
