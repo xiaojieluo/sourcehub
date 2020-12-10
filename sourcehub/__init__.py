@@ -11,8 +11,6 @@ from sourcehub.database import db
 
 api_url = 'http://localhost:5000'
 
-# db = SQLAlchemy()
-
 
 def error(err_code: int, status_code: int = 0, headers: dict = None) -> dict:
     """根据错误码返回错误信息
