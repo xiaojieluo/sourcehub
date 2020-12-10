@@ -1,5 +1,4 @@
-# from mongoengine import Document, StringField, ListField, IntField, DateTimeField, ReferenceField
-from sourcehub import db
+from sourcehub.database import db
 
 class App(db.Model):
     __tablename__ = 'app'

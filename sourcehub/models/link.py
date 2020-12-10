@@ -1,8 +1,7 @@
 import datetime
-from sourcehub import db
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import class_mapper
-from sourcehub.database import MutableList, ModelMixin
+from sourcehub.database import MutableList, ModelMixin, db
 
 
 class Link(ModelMixin, db.Model):

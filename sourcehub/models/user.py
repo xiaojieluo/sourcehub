@@ -5,8 +5,7 @@ from sqlalchemy.dialects import postgresql
 from passlib.apps import custom_app_context as pwd_context
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
 from itsdangerous import SignatureExpired
-from sourcehub import db
-from sourcehub.database import ModelMixin, MutableList
+from sourcehub.database import ModelMixin, MutableList, db
 
 
 class User(ModelMixin, db.Model):
@@ -32,6 +31,12 @@ class User(ModelMixin, db.Model):
     # 帐号活跃值，当用户注销账号时，将值设置为0，即冻结状态
     activity = db.Column(db.Integer, default=1)
     sites = db.Column(
+        MutableList.as_mutable(postgresql.ARRAY(db.Integer, dimensions=1)),
+        default=list(),
+        server_default='{}',
+    )
+
+    links = db.Column(
         MutableList.as_mutable(postgresql.ARRAY(db.Integer, dimensions=1)),
         default=list(),
         server_default='{}',

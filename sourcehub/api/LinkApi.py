@@ -1,6 +1,6 @@
 from flask import Blueprint, current_app, request
 from flask_restful import Resource, Api, reqparse
-from sourcehub import db
+from sourcehub.database import db
 from sourcehub.models import Link, User, Tag
 from sourcehub.auth import authenticate, authenticate_app, authenticate_masterkey, authenticate_session
 from sourcehub import api_url, error

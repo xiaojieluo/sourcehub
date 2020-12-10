@@ -1,6 +1,6 @@
 from flask import Blueprint, current_app
 from flask_restful import Api, Resource, reqparse
-from sourcehub import db
+from sourcehub.database import db
 from sourcehub.models import App
 from sqlalchemy.exc import IntegrityError
 

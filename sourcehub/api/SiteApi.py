@@ -2,10 +2,10 @@ import json
 import datetime
 from flask import Blueprint, current_app, request, jsonify
 from flask_restful import Resource, Api, reqparse
-from sourcehub import api_url, db
+from sourcehub import api_url, error
+from sourcehub.database import db
 from sourcehub.auth import authenticate, authenticate_session, authenticate_app, authenticate_masterkey
 from sourcehub.models import Site, Tag, User
-from sourcehub import error
 
 
 site_api = Blueprint('site_api', __name__)

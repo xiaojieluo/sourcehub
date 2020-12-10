@@ -2,6 +2,10 @@ from sqlalchemy.ext.mutable import Mutable
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import class_mapper
 from datetime import datetime
+from flask_sqlalchemy import SQLAlchemy
+
+
+db = SQLAlchemy()
 
 class MutableList(Mutable, list):
 

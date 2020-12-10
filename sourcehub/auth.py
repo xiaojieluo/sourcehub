@@ -4,6 +4,7 @@ from flask import current_app
 from flask_restful import reqparse
 from flask_login import LoginManager, login_required
 from sourcehub.models import App, User
+from sourcehub import error
 
 
 def authenticate_session(*args, **kw) -> tuple:
@@ -34,7 +35,15 @@ def authenticate_session(*args, **kw) -> tuple:
         return (False, err_msg)
 
 
-def authenticate_key(*args, **kw) -> tuple:
+def authenticate_level(*args, **kw):
+    """验证 sessionToken 获取用户的权限
+    需要数据库字段支持， 0-9 管理员权限
+    TODO
+    """
+    pass
+
+
+def authenticate_app(*args, **kw) -> tuple:
     """验证 app 权限
 
     Returns:
@@ -70,7 +79,7 @@ def authenticate_key(*args, **kw) -> tuple:
             # 若 master key 存在， 将使用 master key 验证
             key = master
         # 用 key 或 master key 计算 sign
-        byte_str = '{}'.format(key + timestamp)
+        byte_str = '{}'.format(timestamp + key)
         local_sign = md5(byte_str.encode('utf-8'))
         if sign == local_sign.hexdigest():
             # Sign 验证通过
@@ -88,7 +97,7 @@ def authenticate_masterkey(*args, **kw) -> tuple:
         tuple(bool, str): 第一个参数为 bool, 验证成功为 True， 验证失败为False
         第二个参数为 str， 验证成功时为 None, 验证失败时返回失败信息。
     """
-    result, err_msg, method = authenticate_key(*args, **kw)
+    result, err_msg, method = authenticate_app(*args, **kw)
     if result is True and method == 'master':
         current_app.logger.debug("验证成功。")
         return (True, None)
@@ -106,7 +115,7 @@ def authenticate(*callback, method='and'):
         def wrapper(*args, **kw):
             data = {
                 'results': list(),
-                'err_msg': list()
+                'err_msg': list(),
             }
             for _func in callback:
                 result = _func(*args, **kw)
@@ -125,6 +134,10 @@ def authenticate(*callback, method='and'):
             if method == 'or':
                 if any(data['results']):
                     return func(*args, **kw)
+
+            # TODO
+            # for err_code in data['err_code']:
+            #     return error(err_code)
             return {'err_code': 1, 'err_msg': data['err_msg']}
 
         return wrapper
